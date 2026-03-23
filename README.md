@@ -3,6 +3,7 @@
 A passive recon automation script that collects historical and live URLs for a target domain, discovers endpoints and parameters, probes for live hosts, and categorizes findings using pattern matching — all in a single command.
 
 ```bash
+chmod +x wayback.sh
 ./wayback.sh domain.com
 ```
 
