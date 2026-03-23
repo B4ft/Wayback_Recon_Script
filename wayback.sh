@@ -116,7 +116,7 @@ echo -e "\n[*] Starting recon for: ${DOMAIN}\n"
 
 # --- gau ---
 echo -e "${GREEN}[+] Running gau...${NC}"
-echo "$DOMAIN" | gau --subs -o "${DOMAIN}_gau_wayback_output.txt"
+echo "$DOMAIN" | gau --subs --o "${DOMAIN}_gau_wayback_output.txt"
 
 # --- waybackurls ---
 echo -e "${GREEN}[+] Running waybackurls...${NC}"
