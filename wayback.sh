@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # wayback + link finder + live check script
 # Usage: ./wayback.sh domain.com
 
@@ -116,7 +116,7 @@ echo -e "\n[*] Starting recon for: ${DOMAIN}\n"
 
 # --- gau ---
 echo -e "${GREEN}[+] Running gau...${NC}"
-echo "$DOMAIN" | gau --subs --o "${DOMAIN}_gau_wayback_output.txt"
+echo "$DOMAIN" | gau --subs -o "${DOMAIN}_gau_wayback_output.txt"
 
 # --- waybackurls ---
 echo -e "${GREEN}[+] Running waybackurls...${NC}"
@@ -181,7 +181,10 @@ LIVE_TOTAL=$(wc -l < "${DOMAIN}_wayback_httpx_check.txt" 2>/dev/null || echo 0)
 echo -e "${GREEN}[+] ${LIVE_TOTAL} live URLs saved to: ${DOMAIN}_wayback_httpx_check.txt${NC}"
 
 # --- gf pattern matching on live URLs ---
-mapfile -t GF_PATTERNS < <(find ~/.gf -name "*.json" 2>/dev/null \
+GF_PATTERNS=()
+while IFS= read -r pattern; do
+    GF_PATTERNS+=("$pattern")
+done < <(find ~/.gf -name "*.json" 2>/dev/null \
     | xargs -I{} basename {} .json \
     | sort -u)
 
