@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # wayback + link finder + live check script
-# Usage: ./wayback.sh domain.com
+# Usage: ./wayback.sh domain.com [--burp]
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -9,13 +9,25 @@ NC='\033[0m'
 
 # --- Validate input ---
 if [ -z "$1" ]; then
-    echo -e "${RED}[!] Usage: $0 <domain>${NC}"
+    echo -e "${RED}[!] Usage: $0 <domain> [--burp]${NC}"
     echo -e "    Example: $0 domain.com"
+    echo -e "    Example: $0 domain.com --burp"
     exit 1
 fi
 
 DOMAIN=$1
 WAYMORE_DIR=~/.config/waymore/results/${DOMAIN}
+
+# --- Parse flags ---
+BURP_PROXY=""
+for arg in "$@"; do
+    case $arg in
+        --burp)
+            BURP_PROXY="-http-proxy http://127.0.0.1:8080"
+            echo -e "${YELLOW}[~] Burp proxy enabled — traffic will be sent through http://127.0.0.1:8080${NC}"
+            ;;
+    esac
+done
 
 # --- Tool check functions ---
 check_go_tool() {
@@ -168,6 +180,7 @@ echo -e "${GREEN}[+] ${FINAL_TOTAL} unique URLs in final list: ${DOMAIN}_final.t
 
 # --- httpx: probe final URL list ---
 echo -e "\n${GREEN}[+] Running httpx on final URL list...${NC}"
+[ -n "$BURP_PROXY" ] && echo -e "${YELLOW}[~] Proxying httpx through Burp at http://127.0.0.1:8080${NC}"
 httpx \
     -l "${DOMAIN}_final.txt" \
     -sc \
@@ -175,6 +188,7 @@ httpx \
     -fr \
     -title \
     -silent \
+    $BURP_PROXY \
     | tee "${DOMAIN}_wayback_httpx_check.txt"
 
 LIVE_TOTAL=$(wc -l < "${DOMAIN}_wayback_httpx_check.txt" 2>/dev/null || echo 0)
