@@ -3,7 +3,6 @@
 A passive recon automation script that collects historical and live URLs for a target domain, discovers endpoints and parameters, probes for live hosts, and categorizes findings using pattern matching — all in a single command.
 
 ```bash
-chmod +x wayback.sh
 ./wayback.sh domain.com
 ```
 
@@ -55,6 +54,22 @@ chmod +x wayback.sh
 ./wayback.sh domain.com
 ```
 
+### Flags
+
+| Flag | Description |
+|------|-------------|
+| `--burp` | Proxy httpx traffic through Burp Suite at `http://127.0.0.1:8080` |
+
+```bash
+# Standard run
+./wayback.sh domain.com
+
+# Proxy httpx through Burp Suite
+./wayback.sh domain.com --burp
+```
+
+> **Note:** When using `--burp`, ensure Burp Suite is running and intercept is **off** before running the script, otherwise httpx will stall waiting for requests to be forwarded manually.
+
 ---
 
 ## Output Files
@@ -96,11 +111,55 @@ Pattern matching runs against live URLs and outputs a separate file per matched 
 
 ---
 
+## Tester Analysis Guide
+
+At minimum, the following testing activities should be performed:
+
+1. Install the wayback recon script and run against in-scope domains: `./wayback.sh domain.com`
+
+2. Analyze `domain.com_final.txt` — review the full deduplicated URL list for interesting paths, endpoints, and file extensions that warrant further manual testing
+
+3. Analyze `domain.com_wayback_httpx_check.txt` — review live URLs and focus on:
+   - Unexpected status codes (403, 401, 500) that may indicate hidden or broken functionality
+   - Interesting page titles that reveal internal tooling, admin panels, or staging environments
+   - Tech stack detections that may indicate outdated or vulnerable software versions
+
+4. Review `domain.com_gf_results/` — each file represents a vulnerability category. Prioritize:
+   - `sqli.txt` — test parameters manually or pass to sqlmap
+   - `xss.txt` — test reflected parameters for XSS
+   - `ssrf.txt` — test for server-side request forgery using an out-of-band callback (e.g. Burp Collaborator or interactsh)
+   - `lfi.txt` — test path traversal and local file inclusion
+   - `redirect.txt` — test for open redirects that could be chained with other vulnerabilities
+   - `idor.txt` — review for insecure direct object references and broken access control
+   - `cors.txt` — test CORS policy misconfigurations
+   - `ssti.txt` — test for server-side template injection
+   - `s3-buckets.txt` — check for publicly accessible or misconfigured S3 buckets
+
+5. Review `domain.com_parameters.txt` — use the discovered parameter list as a basis for fuzzing with tools such as Arjun or ffuf to identify hidden or undocumented parameters
+
+6. Review `domain.com_endpoints.txt` — manually browse interesting endpoints, paying particular attention to:
+   - API endpoints (`/api/`, `/v1/`, `/v2/`)
+   - Admin or internal paths (`/admin/`, `/internal/`, `/dashboard/`)
+   - File references (`.js`, `.json`, `.xml`, `.env`, `.config`, `.bak`)
+   - Authentication endpoints (`/login`, `/oauth`, `/token`, `/reset`)
+
+7. Use `domain.com_wordlist.txt` as a custom target-specific wordlist for directory and endpoint fuzzing with ffuf or gobuster — this wordlist is built from actual content observed on the target so yields better results than generic lists
+
+8. For any URLs returning 403 or 401 in `domain.com_wayback_httpx_check.txt`, attempt bypass techniques including HTTP method tampering, header injection (`X-Forwarded-For`, `X-Original-URL`), and path normalization tricks
+
+9. Cross-reference discovered endpoints and parameters against known CVEs and public exploit databases for any identified technologies from the httpx tech detection output
+
+10. Document all findings with the originating URL from `domain.com_final.txt` to provide full reproduction steps
+
+---
+
 ## Notes
 
 - `waymore` saves its results to `~/.config/waymore/results/<domain>/` — the script copies these into the working directory automatically
 - `xnLinkFinder` appends to output files across both runs (URL list pass and waymore directory pass), so parameters and wordlist entries are consolidated
 - `httpx` output is used as the input for `gf` — if httpx returns no results, gf falls back to the full final URL list
+- gf patterns are loaded dynamically from `~/.gf/` so any custom patterns added manually will be included automatically
+- The script uses `#!/usr/bin/env bash` for compatibility with macOS and other environments where bash may not be at `/bin/bash`
 - Running this script against targets you do not have permission to test may be illegal. Always obtain proper authorization before running recon tools
 
 ---
